@@ -1,109 +1,154 @@
-document.addEventListener('DOMContentLoaded', () => {
+// Wait for DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+
     // Mobile Navigation Toggle
     const navToggle = document.querySelector('.nav-toggle');
     const mainNav = document.querySelector('.main-nav');
-    const navLinks = document.querySelectorAll('.main-nav a');
 
     if (navToggle && mainNav) {
-        navToggle.addEventListener('click', () => {
+        navToggle.addEventListener('click', function() {
             mainNav.classList.toggle('active');
             navToggle.classList.toggle('open');
         });
-
-        // Close nav when a link is clicked (for smooth scrolling)
-        navLinks.forEach(link => {
-            link.addEventListener('click', () => {
-                if (mainNav.classList.contains('active')) {
-                    mainNav.classList.remove('active');
-                    navToggle.classList.remove('open');
-                }
-            });
-        });
     }
 
-    // Intersection Observer for Scroll Animations
-    const animateOnScroll = (entries, observer) => {
+    // Close mobile nav when clicking on a link
+    const navLinks = document.querySelectorAll('.main-nav a');
+    navLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            mainNav.classList.remove('active');
+            navToggle.classList.remove('open');
+        });
+    });
+
+    // --- REFACTORING FOR MULTIPLE SLIDESHOWS START ---
+
+    // Function to initialize a background slideshow
+    function initializeBackgroundSlideshow(containerSelector, imagesArray, intervalTime = 5000) {
+        const slideshowContainer = document.querySelector(containerSelector);
+
+        if (!slideshowContainer) {
+            console.warn(`Slideshow container not found for selector: ${containerSelector}`);
+            return;
+        }
+
+        const imgElements = [];
+
+        // Create and append image elements
+        imagesArray.forEach((src, index) => {
+            const img = document.createElement('img');
+            img.src = src;
+            img.alt = `Background slide ${index + 1}`;
+            img.loading = 'lazy';
+
+            // Make first image active
+            if (index === 0) {
+                img.classList.add('active-slide');
+            }
+
+            slideshowContainer.appendChild(img);
+            imgElements.push(img); // Store reference to the img element
+        });
+
+        // Slideshow functionality
+        let currentSlide = 0;
+
+        function nextSlide() {
+            if (imgElements.length === 0) return; // Prevent errors if no images
+
+            // Remove active class from current slide
+            imgElements[currentSlide].classList.remove('active-slide');
+
+            // Move to next slide
+            currentSlide = (currentSlide + 1) % imgElements.length;
+
+            // Add active class to new slide
+            imgElements[currentSlide].classList.add('active-slide');
+        }
+
+        // Change slide every X seconds
+        setInterval(nextSlide, intervalTime);
+    }
+
+    // Initialize Hero Section Slideshow
+    const heroBackgroundImages = [
+        './backgrounds/1.jpg', // Ensure these paths are correct for your hero
+        './backgrounds/2.jpg',
+        './backgrounds/3.jpg',
+        './backgrounds/4.jpg',
+        './backgrounds/5.jpg',
+        './backgrounds/6.jpg',
+        './backgrounds/7.jpg'
+        // Add more hero background images if you have them
+    ];
+    // Use the specific selector for the hero's slideshow
+    initializeBackgroundSlideshow('.hero-section .background-slideshow', heroBackgroundImages, 5000);
+
+    // Initialize Vision Section Slideshow
+    const visionBackgroundImages = [
+        './backgrounds/20.jpg', // 👈 REPLACE with actual paths for VISION background images
+        './backgrounds/21.jpg', // e.g., './backgrounds/vision_img_01.jpg'
+        './backgrounds/22.jpg',
+        './backgrounds/23.jpg', 
+        './backgrounds/24.jpg', 
+        './backgrounds/25.jpg',
+        './backgrounds/26.jpg', 
+        './backgrounds/27.jpg',
+        './backgrounds/28.jpg'   // Make sure these images exist!
+        // Add more vision background images as needed
+    ];
+    // Use the specific selector for the vision's slideshow
+    initializeBackgroundSlideshow('.vision-section .background-slideshow', visionBackgroundImages, 7000); // Different interval for variety
+
+    // --- REFACTORING FOR MULTIPLE SLIDESHOWS END ---
+
+    // Scroll Animation Observer
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver(function(entries) {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 entry.target.classList.add('is-visible');
-                observer.unobserve(entry.target); // Stop observing once animated
+
+                // Animate child elements with delay
+                const childElements = entry.target.querySelectorAll('.story-item, .vision-point, .manifesto-item');
+                childElements.forEach((child, index) => {
+                    setTimeout(() => {
+                        child.classList.add('is-visible');
+                    }, index * 100);
+                });
             }
         });
-    };
+    }, observerOptions);
 
-    const sectionsToAnimate = document.querySelectorAll('.story-item, .vision-point, .manifesto-item');
-    const observerOptions = {
-        root: null, // viewport
-        rootMargin: '0px',
-        threshold: 0.1 // Trigger when 10% of the item is visible
-    };
-
-    const sectionObserver = new IntersectionObserver(animateOnScroll, observerOptions);
-    sectionsToAnimate.forEach(section => {
-        sectionObserver.observe(section);
+    // Observe all animated sections
+    const animatedSections = document.querySelectorAll('.animated-section');
+    animatedSections.forEach(section => {
+        observer.observe(section);
     });
 
-    // Smooth scroll for internal links
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
+    // Smooth scrolling for navigation links
+    const smoothScrollLinks = document.querySelectorAll('a[href^="#"]');
+    smoothScrollLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
             e.preventDefault();
-            const target = document.querySelector(this.getAttribute('href'));
-            if (target) {
-                target.scrollIntoView({
+
+            const targetId = this.getAttribute('href');
+            const targetElement = document.querySelector(targetId);
+
+            if (targetElement) {
+                const headerHeight = document.querySelector('.main-header').offsetHeight;
+                const targetPosition = targetElement.offsetTop - headerHeight;
+
+                window.scrollTo({
+                    top: targetPosition,
                     behavior: 'smooth'
                 });
             }
         });
     });
 
-    // Basic Form Submission (replace with actual backend logic)
-    const emailSignupForm = document.querySelector('.email-signup');
-    if (emailSignupForm) {
-        emailSignupForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            alert('Thank you for signing up for updates!');
-            this.reset(); // Clear the form
-            // In a real application, you'd send this data to your CRM/email list
-        });
-    }
-
-    // Background Slideshow Logic
-    function setupBackgroundSlideshow() {
-        const slideshowContainer = document.querySelector('.background-slideshow');
-        if (!slideshowContainer) {
-            console.log('Slideshow container not found');
-            return;
-        }
-
-        // Get all img elements inside the slideshow container
-        const slides = slideshowContainer.querySelectorAll('img');
-        console.log('Found slides:', slides.length);
-        
-        if (slides.length <= 1) {
-            if (slides.length === 1) slides[0].classList.add('active-slide');
-            return;
-        }
-
-        let currentSlide = 0;
-        
-        // Ensure first slide is active, others are not
-        slides.forEach((slide, index) => {
-            if (index === 0) {
-                slide.classList.add('active-slide');
-            } else {
-                slide.classList.remove('active-slide');
-            }
-        });
-
-        // Start slideshow
-        setInterval(() => {
-            slides[currentSlide].classList.remove('active-slide');
-            currentSlide = (currentSlide + 1) % slides.length;
-            slides[currentSlide].classList.add('active-slide');
-            console.log('Switched to slide:', currentSlide);
-        }, 4000); // Change slide every 4 seconds
-    }
-
-    // Initialize slideshow
-    setupBackgroundSlideshow();
 });
